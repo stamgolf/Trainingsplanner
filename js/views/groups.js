@@ -53,7 +53,7 @@ export function openGroup(gid) {
     const seasonList = season ? sessionsIn(season.start, season.end, { group_id: g.id }) : [];
     const past = seasonList.filter(s => s.date < today && s.status !== "afgelast"); const logged = past.filter(s => s.log).length;
     const coaches = Array.from(new Set((g.coach_ids || []).concat(...rules.map(r => r.coach_ids || [])))).map(coachById).filter(Boolean);
-    sh.innerHTML = shead(g.name, `<span class="st" style="background:${attr(t ? t.color : "#7A7F85")};color:#fff">${esc(t ? t.name : "")}</span> ${g.level ? esc(g.level) : ""}${g.age ? " · " + esc(g.age) + " jaar" : ""}${g.description ? " · " + esc(g.description) : ""}`, (coord ? xbtn("edit", 'id="gdEdit"') : "") + xbtn("cal", 'id="gdIcs" title="Agenda-export (ICS)"')) + `
+    sh.innerHTML = shead(g.name, `<span class="st" style="background:${attr(t ? t.color : "#7A7F85")};color:#fff">${esc(t ? t.name : "")}</span> ${g.level ? esc(g.level) : ""}${g.age ? " · " + esc(g.age) + " jaar" : ""}${g.description ? " · " + esc(g.description) : ""}`, (coord ? xbtn("edit", 'id="gdEdit"') : "") + xbtn("cal", 'id="gdIcs" title="Agenda-export (ICS)"') + (window.innerWidth >= 1000 ? xbtn("chart", 'id="gdProg" title="Programma"') : "")) + `
     <div class="card"><div class="tiles">
       ${tile("Leden", members.length + (g.max ? ` <span class="muted" style="font-size:13px">/ ${g.max}</span>` : ""), g.max && members.length >= g.max ? "vol" : g.max ? (g.max - members.length) + " plekken vrij" : "", members.length > (g.max || 99) ? "bad" : "")}
       ${tile("Coaches", coaches.length ? avatars(coaches, "sm") : '<span class="bad">—</span>', coaches.map(c => esc(c.name.split(" ")[0])).join(", "))}
@@ -70,6 +70,7 @@ export function openGroup(gid) {
     </div>`;
     const ed = $("#gdEdit", sh); if (ed) ed.onclick = () => openGroupForm(g.id);
     $("#gdIcs", sh).onclick = () => import("./more.js").then(m => m.openIcsSheet(g.id));
+    const gp = $("#gdProg", sh); if (gp) gp.onclick = () => { closeSheet(); location.hash = "#/programma?group=" + g.id; };
     const ar = $("#gdAddRule", sh); if (ar) ar.onclick = () => openRuleForm({ group_id: g.id });
     const am = $("#gdAddMember", sh); if (am) am.onclick = () => openMemberPicker(g.id);
     bindThemesCard(sh, g);
@@ -92,6 +93,7 @@ export function openGroupForm(gid) {
       <div><label class="fld">Niveau</label><input class="in" id="gfLevel" value="${attr(d.level)}" placeholder="bv. GVB-traject, hcp 54-36" list="gfLevels"><datalist id="gfLevels">${["Kennismaking", "Golfstart", "Baanpermissie", "hcp 54-36", "hcp 36-18", "hcp 18-9", "Competitie recreatief", "Competitie competitief", "Selectie", "Gemengd"].map(l => `<option value="${l}">`).join("")}</datalist></div></div>
       <div class="f3"><div><label class="fld">Leeftijd</label><input class="in" id="gfAge" value="${attr(d.age)}" placeholder="bv. 10-12"></div><div><label class="fld">Max. leden</label><input class="in" id="gfMax" type="number" min="1" value="${d.max || ""}"></div><div><label class="fld">Standaardlocatie</label><select class="in" id="gfLoc"><option value="">—</option>${locationsSorted().map(l => `<option value="${attr(l.id)}" ${d.location_id === l.id ? "selected" : ""}>${esc(l.name)}</option>`).join("")}</select></div></div>
       <label class="fld">Vaste coach(es)</label><div class="pick" id="gfCoach">${coachesActive().map(c => `<button data-id="${attr(c.id)}" class="${d.coach_ids.includes(c.id) ? "on" : ""}">${avatar(c, "xs")}${esc(c.name.split(" ")[0])}</button>`).join("")}</div>
+      <div class="f2"><div><label class="fld">Ambitieprofiel</label><select class="in" id="gfProfile">${[["beginner", "Beginner"], ["recreatief", "Recreatief"], ["competitief", "Competitief"], ["selectie", "Selectie"], ["topgolf", "Topgolf"]].map(([v, l]) => `<option value="${v}" ${(d.profile || "recreatief") === v ? "selected" : ""}>${l}</option>`).join("")}</select></div><div><label class="fld">Seizoensdoel</label><input class="in" id="gfGoal" value="${attr(d.goal || "")}" placeholder="bv. naar hcp 36"></div></div>
       <label class="fld">Omschrijving</label><input class="in" id="gfDesc" value="${attr(d.description || "")}" placeholder="bv. 8 lessen, maandagavond">
       <div class="sw" style="margin-top:10px"><div><div class="t">Cursus met vaste looptijd</div><div class="d">Bijvoorbeeld een beginnerscursus van 8 lessen</div></div><button class="toggle ${d.is_course ? "on" : ""}" id="gfCourse"></button></div>
       ${ex ? `<div class="sw"><div><div class="t">Actief</div><div class="d">Inactieve groepen verdwijnen uit de lijsten, de historie blijft</div></div><button class="toggle ${d.active !== false ? "on" : ""}" id="gfActive"></button></div>` : ""}
@@ -103,7 +105,7 @@ export function openGroupForm(gid) {
     const del = $("#gfDel", sh); if (del) del.onclick = () => confirmInline(sh, "Groep, rooster en ledenkoppelingen verwijderen? Dit kan niet ongedaan worden gemaakt.", async () => { for (const r of rulesForGroup(gid)) await store.remove("schedule_rules", r.id); for (const gm of store.rows("group_members").filter(x => x.group_id === gid)) await store.remove("group_members", gm.id); await store.remove("groups", gid); closeSheet(); closeSheet(); toast("Groep verwijderd"); });
     $("#gfSave", sh).onclick = async () => {
       const name = val("gfName", sh); if (!name) { toast("Geef de groep een naam"); return; }
-      const row = { ...d, name, type_id: val("gfType", sh), level: val("gfLevel", sh), age: val("gfAge", sh), max: +val("gfMax", sh) || null, location_id: val("gfLoc", sh) || null, description: val("gfDesc", sh), is_course: $("#gfCourse", sh).classList.contains("on"), active: act ? act.classList.contains("on") : true };
+      const row = { ...d, name, type_id: val("gfType", sh), level: val("gfLevel", sh), age: val("gfAge", sh), max: +val("gfMax", sh) || null, location_id: val("gfLoc", sh) || null, description: val("gfDesc", sh), profile: val("gfProfile", sh), goal: val("gfGoal", sh), is_course: $("#gfCourse", sh).classList.contains("on"), active: act ? act.classList.contains("on") : true };
       if (!row.id) delete row.id;
       const saved = await store.save("groups", row); closeSheet(); toast(ex ? "Groep opgeslagen" : "Groep aangemaakt"); if (!ex) openGroup(saved.id); else refreshSheet();
     };

@@ -70,6 +70,15 @@ supabase/             schema.sql, seed.sql, drills.sql
 - **PDF** (`js/lib/pdf.js`, pdf-lib + Albert Sans in `lib/`): A4 met kop, thema/lesdoel, blokken met tijden, uitvoering, materiaal en notities.
 - Kopiëren van/naar andere sessies; leerlijn kopiëren naar een andere groep.
 
+## Fase 4 — Programma (inhoudelijke planning)
+
+- Tabblad **Programma** (alleen ≥ 1000 px): per groep en seizoen profiel → periodisering → thema's → sessiematrix.
+- **Profiel** (`groups.profile`): Beginner (alleen thema's), Recreatief (AV → SV → Speelseizoen → TR), Competitief (AV, SV, PC, WE, OH, TR), Selectie (+ taper/herstel rond A-pieken), Topgolf (alle fases). Seizoensdoel en MJOP-fase.
+- **Periodisering** (`programs.phases`, C@ddie-model in `js/lib/periodization.js`): fases met trainingsmix techniek/skill/performance en accenten per categorie; automatisch opgebouwd uit profiel + wedstrijden (`buildPhases`), daarna per fase aan te passen.
+- **Wedstrijden** (`programs.peaks`): A/B/C-pieken, handmatig of uit de kalender (activiteiten van het type Wedstrijd), optioneel ook als kalenderactiviteit.
+- **Thema's** uit profielsjablonen (`THEME_TEMPLATES`) over de fases; **sessiematrix** weken × roostermomenten met stand Compact / Inhoud (blokken met drills), vastzetten 🔒 en opnieuw genereren ↻.
+- **Genereer programma** met coach-input: aandachtspunten (komen in elke voorbereiding), nadruk per categorie, blokopbouw, beschikbare locaties, favorieten eerst, herhalingsvenster, fases/thema's opbouwen, bereik. De generator weegt fase-mix, accenten en nadruk mee.
+
 ## Fase 3 — coördinatie
 
 - **Afmelden & vervanging** (`requests`): coach meldt zich af met reden en vraagt optioneel een collega (kandidaten gesorteerd op beschikbaarheid, overlap, specialisatie, vaste coach van de groep); collega accepteert met één tik of coördinator kiest een vervanger; de vervanger krijgt de melding met link naar de sessie (voorbereiding + laatste log staan daar).

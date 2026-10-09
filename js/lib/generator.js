@@ -2,6 +2,7 @@
 // periodethema, duur, locatie, eerder gebruikte drills en de notitie "voor volgende keer" uit het vorige log.
 import { store, membersOf } from "../store/index.js";
 import { addDays } from "./dates.js";
+import { phaseAt, programFor } from "./periodization.js";
 
 export const PHASES = [["warmup", "Warming-up", 0.15], ["techniek", "Techniek", 0.35], ["spelvorm", "Spelvorm / skill", 0.35], ["afsluiting", "Afsluiting", 0.15]];
 export const phaseLabel = k => (PHASES.find(p => p[0] === k) || [k, k])[1];
@@ -16,9 +17,9 @@ export function themeFor(groupId, date) {
 export function themesOf(groupId) { return store.rows("group_themes").filter(t => t.group_id === groupId).sort((a, b) => a.start < b.start ? -1 : 1); }
 
 /** Hoe vaak elke drill recent in deze groep is gebruikt (laatste 90 dagen) en in totaal. */
-export function usageFor(groupId, before) {
+export function usageFor(groupId, before, weeks = 13) {
   const recent = {}, total = {};
-  store.rows("lesson_plans").forEach(p => { (p.blocks || []).forEach(b => { if (!b.drill_id) return; total[b.drill_id] = (total[b.drill_id] || 0) + 1; if (p.group_id === groupId && p.date < before && p.date >= addDays(before, -90)) recent[b.drill_id] = (recent[b.drill_id] || 0) + 1; }); });
+  store.rows("lesson_plans").forEach(p => { (p.blocks || []).forEach(b => { if (!b.drill_id) return; total[b.drill_id] = (total[b.drill_id] || 0) + 1; if (p.group_id === groupId && p.date < before && p.date >= addDays(before, -7 * weeks)) recent[b.drill_id] = (recent[b.drill_id] || 0) + 1; }); });
   return { recent, total };
 }
 
@@ -37,6 +38,16 @@ export function score(d, ctx, phase) {
   else if (phase === "techniek") { if (inFocus) s += 4; if (d.training_type === "techniek") s += 3; else if (d.training_type === "skill") s += 1; if (d.main_cat === "fysiek" || d.main_cat === "prestatiegedrag") s -= 3; }
   else if (phase === "spelvorm") { if (inFocus) s += 4; if (d.training_type === "skill") s += 3; if (d.training_type === "performance") s += 2; if (d.workform && /spel|wedstrijd|tweetal|station/i.test(d.workform)) s += 1; if (d.main_cat === "fysiek") s -= 3; }
   else { if (d.main_cat === "spelen" || (d.sub_cats || []).includes("putten") || d.training_type === "performance") s += 3; if (d.main_cat === "prestatiegedrag") s += 2; if (d.main_cat === "fysiek") s -= 2; if (inFocus) s += 1; }
+  // programma: fase-mix (type), accenten en nadruk (categorie), locaties
+  if (ctx.prog) {
+    const mix = ctx.phase ? ctx.phase.mix : null;
+    if (mix && d.main_cat === "golfskills" && d.training_type && phase !== "warmup") { const idx = { techniek: 0, skill: 1, performance: 2 }[d.training_type]; if (idx != null) s += (mix[idx] - 33) / 25; }
+    const acc = ctx.phase ? (ctx.phase.accents || {}) : {};
+    const keys = [d.main_cat].concat(d.sub_cats || []);
+    const a = Math.max(0, ...keys.map(k => acc[k] || 0)); if (Object.keys(acc).length) s += a ? Math.min(3, a / 12) : -1;
+    const emp = ctx.prog.emphasis || {}; const ek = keys.map(k => emp[k] || (k === "hogeappr" || k === "bunker" ? emp.lageappr : 0) || 0); s += Math.max(...ek, 0) * 1.2 + Math.min(...ek, 0) * 1.2;
+    if ((ctx.prog.locations || []).length && (d.location || []).length && !d.location.some(l => ctx.prog.locations.includes(l))) s -= 4;
+  }
   // niveau
   if (ctx.level && (d.levels || []).length) { if (d.levels.includes(ctx.level)) s += 2; else { const li = levelIdx(ctx.level); const near = d.levels.some(l => Math.abs(levelIdx(l) - li) === 1); s += near ? 0 : -3; } }
   // leeftijd
@@ -50,7 +61,7 @@ export function score(d, ctx, phase) {
   s -= (ctx.usage.recent[d.id] || 0) * 2.5;
   s -= Math.min(1, (ctx.usage.total[d.id] || 0) * 0.1);
   // favoriet van de coach
-  if (ctx.coachId && (d.fav_ids || []).includes(ctx.coachId)) s += 0.5;
+  if (ctx.coachId && (d.fav_ids || []).includes(ctx.coachId)) s += (ctx.prog && ctx.prog.fav_first === false) ? 0 : (ctx.prog ? 1.2 : 0.5);
   return s;
 }
 
@@ -59,25 +70,31 @@ function rnd(seed) { let x = seed % 2147483647 || 1; return () => (x = x * 16807
 /** Genereert blokken voor een sessie. s = verrijkte sessie, opts = {exclude:[], seed}. */
 export function generate(s, opts = {}) {
   const g = s.group; const theme = g ? themeFor(g.id, s.date) : null;
+  const prog = opts.program || (g ? store.rows("programs").find(p => p.group_id === g.id && p.season_id && (store.byId("seasons", p.season_id) || {}).start <= s.date && (store.byId("seasons", p.season_id) || {}).end >= s.date) : null) || null;
+  const phase = prog ? phaseAt(prog, s.date) : null;
   const ctx = {
     focus: theme ? (theme.focus_cats || []) : [], level: g ? g.level : "", ages: g ? ageBand(g.age) : [], locationName: s.location ? s.location.name : "",
-    n: g ? membersOf(g.id).length : 0, usage: usageFor(g ? g.id : null, s.date), coachId: s.coach_ids[0] || null,
+    n: g ? membersOf(g.id).length : 0, usage: usageFor(g ? g.id : null, s.date, prog ? (prog.repeat_weeks || 6) : 13), coachId: s.coach_ids[0] || null, prog, phase,
   };
   const pool = store.rows("drills").filter(d => d.status !== "concept" && !(opts.exclude || []).includes(d.id));
   const random = rnd(opts.seed || (s.key.split("").reduce((a, c) => a + c.charCodeAt(0), 0) + (opts.round || 0) * 97));
   const total = s.minutes || 60; const used = new Set();
-  const blocks = PHASES.map(([k, label, share]) => {
+  const shares = prog && prog.block_shares && prog.block_shares.length === 4 ? prog.block_shares.map(x => x / 100) : PHASES.map(p => p[2]);
+  const blocks = PHASES.filter((p, i) => shares[i] > 0).map(([k, label], i0) => {
+    const i = PHASES.findIndex(p => p[0] === k); const share = shares[i];
     const minutes = Math.max(5, Math.round(total * share / 5) * 5);
     const ranked = pool.filter(d => !used.has(d.id)).map(d => ({ d, v: score(d, ctx, k) + random() * 1.5 })).sort((a, b) => b.v - a.v);
     const pick = ranked[0] ? ranked[0].d : null; if (pick) used.add(pick.id);
     return { id: "b_" + k + "_" + Math.random().toString(36).slice(2, 7), phase: k, drill_id: pick ? pick.id : null, title: pick ? "" : label, minutes, note: "" };
   });
   // minuten laten optellen tot de totale duur
-  const sum = blocks.reduce((a, b) => a + b.minutes, 0); blocks[2].minutes += total - sum;
+  const sum = blocks.reduce((a, b) => a + b.minutes, 0); const big = blocks.reduce((m, b) => b.minutes > m.minutes ? b : m, blocks[0]); if (big) big.minutes += total - sum;
   const prevLog = store.rows("logs").filter(l => g && store.rows("lesson_plans").some(p => p.session_key === l.session_key && p.group_id === g.id) || (g && (store.byId("schedule_rules", l.rule_id) || {}).group_id === g.id)).filter(l => l.date < s.date).sort((a, b) => a.date < b.date ? 1 : -1)[0];
-  const thema = theme ? theme.name : (ctx.focus.length ? ctx.focus.join(", ") : "Algemeen");
-  const lesdoel = theme && theme.goal ? theme.goal : (pick => pick ? firstSentence(pick.goal) : "")(blocks[1].drill_id ? store.byId("drills", blocks[1].drill_id) : null);
-  return { thema, lesdoel, notitie: prevLog && prevLog.next_time ? "Vorige keer: " + prevLog.next_time : "", blocks, theme_id: theme ? theme.id : null };
+  const thema = theme ? theme.name : (phase ? (phase.goal || "") : (ctx.focus.length ? ctx.focus.join(", ") : "Algemeen"));
+  const tb = blocks.find(b => b.phase === "techniek") || blocks[0];
+  const lesdoel = theme && theme.goal ? theme.goal : (pick => pick ? firstSentence(pick.goal) : "")(tb && tb.drill_id ? store.byId("drills", tb.drill_id) : null);
+  const notes = [prog && prog.notes ? "Aandachtspunten: " + prog.notes : "", prevLog && prevLog.next_time ? "Vorige keer: " + prevLog.next_time : ""].filter(Boolean).join("\n");
+  return { thema, lesdoel, notitie: notes, blocks, theme_id: theme ? theme.id : null, phase_type: phase ? phase.type : null };
 }
 export function firstSentence(t, max = 140) { const z = String(t || "").replace(/\s+/g, " ").trim().split(/(?<=[.!?])\s/)[0]; return z.length > max ? z.slice(0, max - 1) + "…" : z; }
 

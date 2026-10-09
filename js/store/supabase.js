@@ -1,7 +1,7 @@
 // Supabase-opslag: Postgres + Auth + Realtime. Zelfde interface als demo.js.
 // Vereist window.supabase (supabase-js v2 via CDN, zie index.html) en TP_CONFIG.supabaseUrl/anonKey.
 const TABLES = ["coaches", "members", "group_members", "seasons", "breaks", "locations", "group_types", "activity_types", "groups",
-  "schedule_rules", "overrides", "logs", "attendance", "action_items", "drills", "notifications", "lesson_plans", "group_themes", "requests"];
+  "schedule_rules", "overrides", "logs", "attendance", "action_items", "drills", "notifications", "lesson_plans", "group_themes", "requests", "programs"];
 
 export function createSupabaseStore(cfg) {
   const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);

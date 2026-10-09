@@ -10,9 +10,10 @@ import * as Groups from "./views/groups.js";
 import * as Activities from "./views/activities.js";
 import * as Drills from "./views/drills.js";
 import * as More from "./views/more.js";
+import * as Program from "./views/program.js";
 
-const VIEWS = { vandaag: Today, kalender: Calendar, groepen: Groups, activiteiten: Activities, drills: Drills, meer: More };
-const NAV = [["vandaag", "Vandaag", "today"], ["kalender", "Kalender", "cal"], ["groepen", "Groepen", "groups"], ["activiteiten", "Activiteiten", "flag"], ["drills", "Drills", "drills"]];
+const VIEWS = { vandaag: Today, kalender: Calendar, groepen: Groups, programma: Program, activiteiten: Activities, drills: Drills, meer: More };
+const NAV = [["vandaag", "Vandaag", "today"], ["kalender", "Kalender", "cal"], ["groepen", "Groepen", "groups"], ["programma", "Programma", "chart", "desk"], ["activiteiten", "Activiteiten", "flag"], ["drills", "Drills", "drills"]];
 const cfg = window.TP_CONFIG || {};
 let current = null;
 
@@ -39,7 +40,7 @@ function shell() {
     <button class="userbtn" id="hdrUser" title="Mijn profiel">${avatar(me)}<span><span class="nm">${esc(me.name)}</span><span class="rl">${me.is_coordinator && me.is_coach ? "Coördinator · Coach" : me.is_coordinator ? "Coördinator" : "Coach"}</span></span></button>
   </header>
   <main id="main"></main>
-  <div class="subbar"><div class="subbar-in">${NAV.map(([k, l, ic]) => `<button class="sbtn" data-nav="${k}" title="${l}" aria-label="${l}">${ICON[ic]}<span>${l}</span></button>`).join("")}</div></div>`;
+  <div class="subbar"><div class="subbar-in">${NAV.map(([k, l, ic, cls]) => `<button class="sbtn ${cls || ""}" data-nav="${k}" title="${l}" aria-label="${l}">${ICON[ic]}<span>${l}</span></button>`).join("")}</div></div>`;
   $("#hdrSettings", app).onclick = () => openSettings();
   $("#hdrBell", app).onclick = () => openNotifications();
   $("#hdrUser", app).onclick = () => openSettings("profiel");

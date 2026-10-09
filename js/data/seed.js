@@ -57,16 +57,16 @@ export const BREAKS = [
 ];
 
 const G = (id, name, type_id, opts) => ({
-  id, name, type_id, level: opts.level || "", age: opts.age || "", max: opts.max || 8, location_id: opts.loc || null,
+  id, name, type_id, profile: opts.profile || (type_id === "gt_begin" ? "beginner" : type_id === "gt_comp" ? "competitief" : "recreatief"), goal: opts.goal || "", mjop: opts.mjop || "", level: opts.level || "", age: opts.age || "", max: opts.max || 8, location_id: opts.loc || null,
   season_id: opts.season || "s_winter26", coach_ids: opts.coaches || [], description: opts.desc || "", active: true, is_course: !!opts.course,
 });
 export const GROUPS = [
-  G("g_birdies_wo", "Jeugd Birdies (6-9) woensdag", "gt_jeugd", { age: "6-9", level: "Kennismaking", loc: "loc_short", coaches: ["c_sanne", "c_daan"] }),
-  G("g_eagles_wo", "Jeugd Eagles (10-12) woensdag", "gt_jeugd", { age: "10-12", level: "Baanpermissie", loc: "loc_range", coaches: ["c_tom"] }),
+  G("g_birdies_wo", "Jeugd Birdies (6-9) woensdag", "gt_jeugd", { age: "6-9", level: "Kennismaking", loc: "loc_short", coaches: ["c_sanne", "c_daan"], profile: "beginner", mjop: "F1" }),
+  G("g_eagles_wo", "Jeugd Eagles (10-12) woensdag", "gt_jeugd", { age: "10-12", level: "Baanpermissie", loc: "loc_range", coaches: ["c_tom"], goal: "Baanpermissie en hcp 54", mjop: "F3" }),
   G("g_albatros_wo", "Jeugd Albatros (13-17) woensdag", "gt_jeugd", { age: "13-17", level: "hcp 54-36", loc: "loc_range", coaches: ["c_mark"] }),
   G("g_birdies_za", "Jeugd Birdies (6-9) zaterdag", "gt_jeugd", { age: "6-9", level: "Kennismaking", loc: "loc_kunst", coaches: ["c_daan"] }),
   G("g_eagles_za", "Jeugd Eagles (10-12) zaterdag", "gt_jeugd", { age: "10-12", level: "Baanpermissie", loc: "loc_range", coaches: ["c_sanne"] }),
-  G("g_jeugdsel", "Jeugdselectie", "gt_comp", { age: "12-18", level: "Competitie competitief", loc: "loc_baan", coaches: ["c_tom", "c_mark"], max: 10 }),
+  G("g_jeugdsel", "Jeugdselectie", "gt_comp", { age: "12-18", level: "Competitie competitief", loc: "loc_baan", coaches: ["c_tom", "c_mark"], max: 10, profile: "selectie", goal: "Top 3 NGF Jeugdtour", mjop: "A2" }),
   G("g_heren1", "Competitie Heren 1", "gt_comp", { level: "Competitie competitief", loc: "loc_range", coaches: ["c_mark"], max: 10 }),
   G("g_dames1", "Competitie Dames 1", "gt_comp", { level: "Competitie recreatief", loc: "loc_short", coaches: ["c_lisa"], max: 10 }),
   G("g_begin_okt", "Beginnerscursus oktober", "gt_begin", { level: "Kennismaking", loc: "loc_range", coaches: ["c_lisa"], course: true, desc: "8 lessen, maandagavond" }),
@@ -163,6 +163,6 @@ export function seedAll() {
   return {
     coaches: COACHES, members: MEMBERS, group_members: GROUP_MEMBERS, seasons: SEASONS, breaks: BREAKS, locations: LOCATIONS,
     group_types: GROUP_TYPES, activity_types: ACTIVITY_TYPES, groups: GROUPS, schedule_rules: RULES, overrides: OVERRIDES,
-    logs: LOGS, attendance: ATTENDANCE, action_items: ACTION_ITEMS, drills: DRILLS, notifications: [], lesson_plans: [], group_themes: GROUP_THEMES, requests: [],
+    logs: LOGS, attendance: ATTENDANCE, action_items: ACTION_ITEMS, drills: DRILLS, notifications: [], lesson_plans: [], group_themes: GROUP_THEMES, requests: [], programs: [],
   };
 }

@@ -63,6 +63,7 @@ create table if not exists groups (
   coach_ids jsonb default '[]'::jsonb,
   description text default '',
   is_course boolean not null default false,
+  profile text default 'recreatief', goal text default '', mjop text default '',
   active boolean not null default true,
   created_at timestamptz default now()
 );
@@ -193,6 +194,17 @@ create table if not exists requests (
   resolved_by text, created_at timestamptz default now()
 );
 
+create table if not exists programs (
+  id text primary key default gen_random_uuid()::text,
+  group_id text not null references groups(id) on delete cascade,
+  season_id text not null references seasons(id) on delete cascade,
+  profile text default 'recreatief', goal text default '', mjop text default '',
+  notes text default '', emphasis jsonb default '{}'::jsonb, block_shares jsonb default '[15,35,35,15]'::jsonb,
+  locations jsonb default '[]'::jsonb, repeat_weeks int default 6, fav_first boolean default true,
+  phases jsonb default '[]'::jsonb, peaks jsonb default '[]'::jsonb, locked jsonb default '[]'::jsonb, cfg jsonb default '{}'::jsonb,
+  unique (group_id, season_id)
+);
+
 -- ---------- Rechten (Row Level Security) ----------
 -- Hulpfuncties: wie ben ik?
 create or replace function my_coach_id() returns text language sql stable security definer as $$
@@ -207,7 +219,7 @@ $$;
 
 -- Alle tabellen: RLS aan.
 do $$ declare t text; begin
-  foreach t in array array['coaches','members','seasons','breaks','locations','group_types','activity_types','groups','group_members','schedule_rules','overrides','logs','attendance','action_items','drills','notifications','lesson_plans','group_themes','requests'] loop
+  foreach t in array array['coaches','members','seasons','breaks','locations','group_types','activity_types','groups','group_members','schedule_rules','overrides','logs','attendance','action_items','drills','notifications','lesson_plans','group_themes','requests','programs'] loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists "team leest" on %I', t);
     execute format('create policy "team leest" on %I for select using (is_team())', t);
@@ -224,7 +236,7 @@ create policy "eigen profiel" on coaches for update using (user_id = auth.uid())
 
 -- Coördinator: alles schrijven.
 do $$ declare t text; begin
-  foreach t in array array['coaches','members','seasons','breaks','locations','group_types','activity_types','groups','group_members','schedule_rules','overrides','logs','attendance','action_items','drills','notifications','lesson_plans','group_themes','requests'] loop
+  foreach t in array array['coaches','members','seasons','breaks','locations','group_types','activity_types','groups','group_members','schedule_rules','overrides','logs','attendance','action_items','drills','notifications','lesson_plans','group_themes','requests','programs'] loop
     execute format('drop policy if exists "coordinator schrijft" on %I', t);
     execute format('create policy "coordinator schrijft" on %I for all using (is_coordinator()) with check (is_coordinator())', t);
   end loop;
@@ -246,6 +258,10 @@ drop policy if exists "coach eigen lesplan" on lesson_plans;
 create policy "coach eigen lesplan" on lesson_plans for all
   using (is_team() and exists (select 1 from schedule_rules r where r.id = rule_id and r.coach_ids ? my_coach_id()))
   with check (is_team() and exists (select 1 from schedule_rules r where r.id = rule_id and r.coach_ids ? my_coach_id()));
+drop policy if exists "coach eigen programma" on programs;
+create policy "coach eigen programma" on programs for all using (is_team() and exists (select 1 from groups g where g.id = group_id and g.coach_ids ? my_coach_id())) with check (is_team() and exists (select 1 from groups g where g.id = group_id and g.coach_ids ? my_coach_id()));
+drop policy if exists "coach eigen thema" on group_themes;
+create policy "coach eigen thema" on group_themes for all using (is_team() and exists (select 1 from groups g where g.id = group_id and g.coach_ids ? my_coach_id())) with check (is_team() and exists (select 1 from groups g where g.id = group_id and g.coach_ids ? my_coach_id()));
 drop policy if exists "coach eigen log" on logs;
 create policy "coach eigen log" on logs for all using (is_team() and coach_id = my_coach_id()) with check (is_team() and coach_id = my_coach_id());
 drop policy if exists "coach aanwezigheid" on attendance;
@@ -270,7 +286,7 @@ create policy "vervanger override" on overrides for all
 
 -- Realtime aanzetten voor alle tabellen.
 do $$ declare t text; begin
-  foreach t in array array['coaches','members','seasons','breaks','locations','group_types','activity_types','groups','group_members','schedule_rules','overrides','logs','attendance','action_items','drills','notifications','lesson_plans','group_themes','requests'] loop
+  foreach t in array array['coaches','members','seasons','breaks','locations','group_types','activity_types','groups','group_members','schedule_rules','overrides','logs','attendance','action_items','drills','notifications','lesson_plans','group_themes','requests','programs'] loop
     begin execute format('alter publication supabase_realtime add table %I', t); exception when duplicate_object then null; end;
   end loop;
 end $$;
