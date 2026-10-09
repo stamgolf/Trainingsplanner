@@ -75,8 +75,8 @@ supabase/             schema.sql, seed.sql, drills.sql
 - Tabblad **Programma** (alleen ≥ 1000 px): per groep en seizoen profiel → periodisering → thema's → sessiematrix.
 - **Profiel** (`groups.profile`): Beginner (alleen thema's), Recreatief (AV → SV → Speelseizoen → TR), Competitief (AV, SV, PC, WE, OH, TR), Selectie (+ taper/herstel rond A-pieken), Topgolf (alle fases). Seizoensdoel en MJOP-fase.
 - **Periodisering** (`programs.phases`, C@ddie-model in `js/lib/periodization.js`): fases met trainingsmix techniek/skill/performance en accenten per categorie; automatisch opgebouwd uit profiel + wedstrijden (`buildPhases`), daarna per fase aan te passen.
-- **Wedstrijden** (`programs.peaks`): A/B/C-pieken, handmatig of uit de kalender (activiteiten van het type Wedstrijd), optioneel ook als kalenderactiviteit.
-- **Thema's** uit profielsjablonen (`THEME_TEMPLATES`) over de fases; **sessiematrix** weken × roostermomenten met stand Compact / Inhoud (blokken met drills), vastzetten 🔒 en opnieuw genereren ↻.
+- **Wedstrijden** (`programs.peaks`): A/B/C-pieken, uit de wedstrijdbibliotheek ("Uit bibliotheek"), handmatig of uit de kalender (activiteiten van het type Wedstrijd).
+- **Thema's** uit profielsjablonen (`THEME_TEMPLATES`) over de fases; **sessiematrix** weken × roostermomenten met stand Compact / Inhoud (blokken met drills), vastzetten en opnieuw genereren per sessie; vakanties als gearceerd blok.
 - **Genereer programma** met coach-input: aandachtspunten (komen in elke voorbereiding), nadruk per categorie, blokopbouw, beschikbare locaties, favorieten eerst, herhalingsvenster, fases/thema's opbouwen, bereik. De generator weegt fase-mix, accenten en nadruk mee.
 
 ## Fase 3 — coördinatie
@@ -86,3 +86,10 @@ supabase/             schema.sql, seed.sql, drills.sql
 - **ICS-agenda**: download per coach, per groep of hele team (6 maanden vooruit, Europe/Amsterdam). Een live abonnement vraagt een kleine Supabase Edge Function (fase 4).
 - **Seizoen kopiëren**: Instellingen → Seizoenen → kopieer-icoon: roosterregels, leerlijnen en vakanties schuiven in hele weken mee naar een nieuw seizoen.
 - **Rapportages**: dekking per groep (gelogd / voorbereid, voorbij en komend), thema-heatmap (minuten per hoofdcategorie per groep), vervangingen; CSV-export.
+
+## Fase 5 — Wedstrijdmodule
+
+- **Wedstrijdbibliotheek** (pagina *Wedstrijden*, via Activiteiten → Wedstrijden of Instellingen): tours (`tours`: naam, kleur), wedstrijden (`competitions`: categorie, speelvorm, klasse A/B/C, dagen, locatie, organisator, link, labels) en **edities per seizoen** (`competition_editions`: datum/einde, tijden, klasse, locatie, gekoppelde groepen).
+- **In de kalender**: één tik zet een editie als activiteit van het type Wedstrijd in de kalender (coaches = coaches van de gekoppelde groepen; `schedule_rules.edition_id`); datum- en groepswijzigingen werken door, "Uit kalender halen" verwijdert de activiteit weer.
+- **In programma's**: groep koppelen vanuit de editie, of op de programmapagina *Uit bibliotheek*; de editie wordt een A/B/C-piek (`peaks[].edition_id`) die de periodisering stuurt. Ontkoppelen haalt de piek weer weg.
+- Rechten: team leest, coördinator beheert (RLS).

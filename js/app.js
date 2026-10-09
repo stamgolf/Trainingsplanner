@@ -11,8 +11,9 @@ import * as Activities from "./views/activities.js";
 import * as Drills from "./views/drills.js";
 import * as More from "./views/more.js";
 import * as Program from "./views/program.js";
+import * as Competitions from "./views/competitions.js";
 
-const VIEWS = { vandaag: Today, kalender: Calendar, groepen: Groups, programma: Program, activiteiten: Activities, drills: Drills, meer: More };
+const VIEWS = { vandaag: Today, kalender: Calendar, groepen: Groups, programma: Program, activiteiten: Activities, wedstrijden: Competitions, drills: Drills, meer: More };
 const NAV = [["vandaag", "Vandaag", "today"], ["kalender", "Kalender", "cal"], ["groepen", "Groepen", "groups"], ["programma", "Programma", "chart", "desk"], ["activiteiten", "Activiteiten", "flag"], ["drills", "Drills", "drills"]];
 const cfg = window.TP_CONFIG || {};
 let current = null;

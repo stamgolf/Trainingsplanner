@@ -21,7 +21,7 @@ export function render(main) {
   <div class="spkop"><h1>Activiteiten</h1>
     ${klsel("acType", [["", "Alle typen"]].concat(types.map(t => [t.id, t.name])), st.type)}
     ${kpi([[upcoming.filter(s => s.status !== "afgelast").length, "komend"], [upcoming.filter(s => s.isMatch).length, "wedstrijden", "att"], [rules.length, "terugkerend"]])}
-    <div class="right"><div class="seg" id="acMine"><button data-v="0" class="${!st.mine ? "on" : ""}">Alle</button><button data-v="1" class="${st.mine ? "on" : ""}">Mijn</button></div><button class="plusbtn" id="acAdd" title="Nieuwe activiteit">+</button></div>
+    <div class="right"><div class="seg" id="acMine"><button data-v="0" class="${!st.mine ? "on" : ""}">Alle</button><button data-v="1" class="${st.mine ? "on" : ""}">Mijn</button></div><button class="btn sm ghost" id="acComp">Wedstrijden</button><button class="plusbtn" id="acAdd" title="Nieuwe activiteit">+</button></div>
   </div>
   <div class="grid">
     <div class="card fixed" style="height:520px"><div class="chead"><h2>Komende activiteiten</h2><span class="cvn">${upcoming.length}</span><span class="hdnote">4 maanden</span></div><div class="cbody">${upcoming.length ? groupByDay(upcoming) : '<div class="empty">Geen activiteiten gepland. Voeg een wedstrijd, clinic of overleg toe met +.</div>'}</div></div>
@@ -34,6 +34,7 @@ export function render(main) {
   $("#acType", main).onchange = e => { st.type = e.target.value; render(main); };
   $("#acMine", main).onclick = e => { const b = e.target.closest("button"); if (!b) return; st.mine = b.dataset.v === "1"; render(main); };
   $("#acAdd", main).onclick = () => openRuleForm({ kind: "activity" });
+  $("#acComp", main).onclick = () => { location.hash = "#/wedstrijden"; };
   main.onclick = e => {
     const r = e.target.closest("[data-rule]"); if (r) { const rule = store.byId("schedule_rules", r.dataset.rule); if (isCoordinator() || (rule.coach_ids || []).includes(store.me.id)) openRuleForm({ rule }); return; }
     const k = e.target.closest("[data-key]"); if (k) openSession(k.dataset.key);

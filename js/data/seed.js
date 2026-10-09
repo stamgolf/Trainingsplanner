@@ -159,10 +159,44 @@ export const GROUP_THEMES = [
   { id: "t7", group_id: "g_begin_okt", name: "Kennismaking", start: "2026-10-05", weeks: 8, focus_cats: ["putten", "lageappr", "fullswing"], goal: "Basis van putten, chippen en de volle swing", color: "#17a05c" },
 ];
 
+/* ---------- Wedstrijden: tours, bibliotheek en edities ---------- */
+export const TOURS = [
+  { id: "t_club", name: "Clubwedstrijden", color: "#F47C20", order: 1, notes: "Eigen wedstrijden Golfacademy / club" },
+  { id: "t_ngfjeugd", name: "NGF Jeugd", color: "#4A6FA5", order: 2, notes: "Regionale en landelijke jeugdwedstrijden" },
+  { id: "t_ngfcomp", name: "NGF Competitie", color: "#17a05c", order: 3, notes: "Voorjaarscompetitie teams" },
+  { id: "t_regio", name: "Regio & open", color: "#8E6BB5", order: 4 },
+];
+export const COMPETITIONS = [
+  { id: "cp_jeugdclub", tour_id: "t_club", name: "Jeugd clubwedstrijd", category: "Jeugd", format: "Stableford", klasse: "C", days: 1, location_name: "Par-3 baan", organizer: "Golfacademy", labels: ["9 holes"], notes: "Maandelijks, alle jeugdgroepen welkom" },
+  { id: "cp_clubkamp", tour_id: "t_club", name: "Clubkampioenschap strokeplay", category: "Open", format: "Strokeplay", klasse: "A", days: 2, location_name: "Grote baan", organizer: "Wedstrijdcommissie", labels: ["36 holes"] },
+  { id: "cp_wintercomp", tour_id: "t_club", name: "Wintercompetitie", category: "Open", format: "Stableford", klasse: "C", days: 1, location_name: "Grote baan", organizer: "Wedstrijdcommissie", labels: ["reeks"] },
+  { id: "cp_ngfjeugdtour", tour_id: "t_ngfjeugd", name: "NGF Jeugdtour regio", category: "Jeugd", format: "Strokeplay", klasse: "B", days: 1, location_name: "wisselend", organizer: "NGF", url: "https://www.ngf.nl", labels: ["18 holes", "hcp ≤ 36"] },
+  { id: "cp_nkjeugd", tour_id: "t_ngfjeugd", name: "NK Jeugd", category: "Jeugd", format: "Strokeplay", klasse: "A", days: 3, location_name: "wisselend", organizer: "NGF", labels: ["54 holes", "kwalificatie"] },
+  { id: "cp_voorjaarscomp", tour_id: "t_ngfcomp", name: "NGF Voorjaarscompetitie", category: "Team", format: "Teamwedstrijd", klasse: "A", days: 1, location_name: "uit/thuis", organizer: "NGF", labels: ["reeks", "6 speeldagen"] },
+  { id: "cp_damesdag", tour_id: "t_regio", name: "Ladies Open Flevoland", category: "Dames", format: "Stableford", klasse: "B", days: 1, location_name: "Extern", organizer: "Regio" },
+  { id: "cp_seniorenopen", tour_id: "t_regio", name: "Senioren Open", category: "Senioren", format: "Stableford", klasse: "C", days: 1, location_name: "Grote baan", organizer: "Wedstrijdcommissie" },
+];
+export const COMPETITION_EDITIONS = [
+  { id: "ce_jeugdclub_nov", competition_id: "cp_jeugdclub", season_id: "s_winter26", name: "", start: "2026-11-08", end: null, van: "13:00", tot: "17:00", level: "C", location_name: "Par-3 baan", group_ids: ["g_eagles_wo", "g_eagles_za"], rule_id: null, notes: "" },
+  { id: "ce_jeugdclub_feb", competition_id: "cp_jeugdclub", season_id: "s_winter26", name: "", start: "2027-02-14", end: null, van: "13:00", tot: "17:00", level: "C", location_name: "Par-3 baan", group_ids: [], rule_id: null, notes: "" },
+  { id: "ce_ngfjeugd_mrt", competition_id: "cp_ngfjeugdtour", season_id: "s_winter26", name: "NGF Jeugdtour regio 1", start: "2027-03-21", end: null, van: "08:30", tot: "16:00", level: "B", location_name: "GC Lelystad", group_ids: ["g_jeugdsel"], rule_id: null, notes: "" },
+  { id: "ce_voorjaar_1", competition_id: "cp_voorjaarscomp", season_id: "s_winter26", name: "Voorjaarscompetitie speeldag 1", start: "2027-03-28", end: null, van: "08:00", tot: "15:00", level: "A", location_name: "uit", group_ids: ["g_heren1"], rule_id: null, notes: "" },
+  { id: "ce_wintercomp", competition_id: "cp_wintercomp", season_id: "s_winter26", name: "", start: null, end: null, van: "10:00", tot: "15:00", level: "C", location_name: "Grote baan", group_ids: [], rule_id: null, notes: "Datums volgen" },
+];
+
+const PK = (ed, name, date, level, extra = {}) => ({ id: "pk_" + ed, name, date, end: "", level, edition_id: ed, ...extra });
+const PRG = (group_id, profile, peaks) => ({ id: "pr_" + group_id + "_w26", group_id, season_id: "s_winter26", profile, goal: (GROUPS.find(g => g.id === group_id) || {}).goal || "", mjop: (GROUPS.find(g => g.id === group_id) || {}).mjop || "", notes: "", emphasis: {}, block_shares: [15, 35, 35, 15], locations: [], repeat_weeks: 6, fav_first: true, phases: [], peaks, locked: [], cfg: {} });
+export const PROGRAMS = [
+  PRG("g_eagles_wo", "recreatief", [PK("ce_jeugdclub_nov", "Jeugd clubwedstrijd", "2026-11-08", "C")]),
+  PRG("g_eagles_za", "recreatief", [PK("ce_jeugdclub_nov", "Jeugd clubwedstrijd", "2026-11-08", "C")]),
+  PRG("g_jeugdsel", "selectie", [PK("ce_ngfjeugd_mrt", "NGF Jeugdtour regio 1", "2027-03-21", "B")]),
+  PRG("g_heren1", "competitief", [PK("ce_voorjaar_1", "Voorjaarscompetitie speeldag 1", "2027-03-28", "A")]),
+];
+
 export function seedAll() {
   return {
     coaches: COACHES, members: MEMBERS, group_members: GROUP_MEMBERS, seasons: SEASONS, breaks: BREAKS, locations: LOCATIONS,
     group_types: GROUP_TYPES, activity_types: ACTIVITY_TYPES, groups: GROUPS, schedule_rules: RULES, overrides: OVERRIDES,
-    logs: LOGS, attendance: ATTENDANCE, action_items: ACTION_ITEMS, drills: DRILLS, notifications: [], lesson_plans: [], group_themes: GROUP_THEMES, requests: [], programs: [],
+    logs: LOGS, attendance: ATTENDANCE, action_items: ACTION_ITEMS, drills: DRILLS, notifications: [], lesson_plans: [], group_themes: GROUP_THEMES, requests: [], programs: PROGRAMS, tours: TOURS, competitions: COMPETITIONS, competition_editions: COMPETITION_EDITIONS,
   };
 }

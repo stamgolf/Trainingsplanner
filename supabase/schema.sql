@@ -93,6 +93,7 @@ create table if not exists schedule_rules (
   season_id text references seasons(id) on delete set null,
   skip_breaks boolean not null default true,
   archived boolean not null default false,
+  edition_id text,                               -- gekoppelde wedstrijdeditie (competition_editions.id)
   created_by text references coaches(id) on delete set null,
   created_at timestamptz default now()
 );
@@ -205,6 +206,28 @@ create table if not exists programs (
   unique (group_id, season_id)
 );
 
+-- Wedstrijdmodule: tours → bibliotheek → edities per seizoen
+create table if not exists tours (
+  id text primary key default gen_random_uuid()::text,
+  name text not null, color text default '#7A7F85', "order" int default 99, notes text default ''
+);
+create table if not exists competitions (
+  id text primary key default gen_random_uuid()::text,
+  tour_id text references tours(id) on delete set null,
+  name text not null, category text default 'Open', format text default 'Strokeplay', klasse text default 'B',
+  days int default 1, location_name text default '', organizer text default '', url text default '',
+  labels jsonb default '[]'::jsonb, notes text default ''
+);
+create table if not exists competition_editions (
+  id text primary key default gen_random_uuid()::text,
+  competition_id text not null references competitions(id) on delete cascade,
+  season_id text not null references seasons(id) on delete cascade,
+  name text default '', start date, "end" date, van text default '09:00', tot text default '17:00',
+  level text default 'B', location_name text default '',
+  group_ids jsonb default '[]'::jsonb, rule_id text references schedule_rules(id) on delete set null, notes text default ''
+);
+alter table schedule_rules add column if not exists edition_id text;
+
 -- ---------- Rechten (Row Level Security) ----------
 -- Hulpfuncties: wie ben ik?
 create or replace function my_coach_id() returns text language sql stable security definer as $$
@@ -219,7 +242,7 @@ $$;
 
 -- Alle tabellen: RLS aan.
 do $$ declare t text; begin
-  foreach t in array array['coaches','members','seasons','breaks','locations','group_types','activity_types','groups','group_members','schedule_rules','overrides','logs','attendance','action_items','drills','notifications','lesson_plans','group_themes','requests','programs'] loop
+  foreach t in array array['coaches','members','seasons','breaks','locations','group_types','activity_types','groups','group_members','schedule_rules','overrides','logs','attendance','action_items','drills','notifications','lesson_plans','group_themes','requests','programs','tours','competitions','competition_editions'] loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists "team leest" on %I', t);
     execute format('create policy "team leest" on %I for select using (is_team())', t);
@@ -236,7 +259,7 @@ create policy "eigen profiel" on coaches for update using (user_id = auth.uid())
 
 -- Coördinator: alles schrijven.
 do $$ declare t text; begin
-  foreach t in array array['coaches','members','seasons','breaks','locations','group_types','activity_types','groups','group_members','schedule_rules','overrides','logs','attendance','action_items','drills','notifications','lesson_plans','group_themes','requests','programs'] loop
+  foreach t in array array['coaches','members','seasons','breaks','locations','group_types','activity_types','groups','group_members','schedule_rules','overrides','logs','attendance','action_items','drills','notifications','lesson_plans','group_themes','requests','programs','tours','competitions','competition_editions'] loop
     execute format('drop policy if exists "coordinator schrijft" on %I', t);
     execute format('create policy "coordinator schrijft" on %I for all using (is_coordinator()) with check (is_coordinator())', t);
   end loop;
@@ -286,7 +309,7 @@ create policy "vervanger override" on overrides for all
 
 -- Realtime aanzetten voor alle tabellen.
 do $$ declare t text; begin
-  foreach t in array array['coaches','members','seasons','breaks','locations','group_types','activity_types','groups','group_members','schedule_rules','overrides','logs','attendance','action_items','drills','notifications','lesson_plans','group_themes','requests','programs'] loop
+  foreach t in array array['coaches','members','seasons','breaks','locations','group_types','activity_types','groups','group_members','schedule_rules','overrides','logs','attendance','action_items','drills','notifications','lesson_plans','group_themes','requests','programs','tours','competitions','competition_editions'] loop
     begin execute format('alter publication supabase_realtime add table %I', t); exception when duplicate_object then null; end;
   end loop;
 end $$;
