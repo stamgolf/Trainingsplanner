@@ -26,7 +26,7 @@ export function render(main, params) {
     ${searchPil("grQ", "Zoek groep …", st.q)}
     ${klsel("grType", [["", "Alle typen"]].concat(types.map(t => [t.id, t.name])), st.type)}
     ${kpi([[groupsSorted().length, "groepen"], [totalMembers, "leden"], [coachesActive().length, "coaches"]])}
-    <div class="right"><div class="seg" id="grMine"><button data-v="0" class="${!st.mine ? "on" : ""}">Alle</button><button data-v="1" class="${st.mine ? "on" : ""}">Mijn groepen</button></div>${coord ? '<button class="plusbtn" id="grAdd" title="Nieuwe groep">+</button>' : ""}</div>
+    <div class="right"><button class="btn ghost sm" id="grMembers">Spelers</button><div class="seg" id="grMine"><button data-v="0" class="${!st.mine ? "on" : ""}">Alle</button><button data-v="1" class="${st.mine ? "on" : ""}">Mijn groepen</button></div>${coord ? '<button class="plusbtn" id="grAdd" title="Nieuwe groep">+</button>' : ""}</div>
   </div>
   <div class="grid">${types.filter(t => groups.some(g => g.type_id === t.id)).map(t => {
     const gs = groups.filter(g => g.type_id === t.id);
@@ -41,6 +41,7 @@ export function render(main, params) {
   $("#grType", main).onchange = e => { st.type = e.target.value; render(main); };
   $("#grMine", main).onclick = e => { const b = e.target.closest("button"); if (!b) return; st.mine = b.dataset.v === "1"; render(main); };
   const add = $("#grAdd", main); if (add) add.onclick = () => openGroupForm();
+  $("#grMembers", main).onclick = () => openMembers();
   main.onclick = e => { const g = e.target.closest("[data-group]"); if (g) openGroup(g.dataset.group); };
 }
 
@@ -129,10 +130,11 @@ export function openMember(mid, fromGroup) {
     const m = store.byId("members", mid); if (!m) { sh.innerHTML = shead("Lid", "niet gevonden"); return; }
     const gms = store.rows("group_members").filter(gm => gm.member_id === mid); const att = store.rows("attendance").filter(a => a.member_id === mid).sort((a, b) => a.date < b.date ? 1 : -1);
     sh.innerHTML = shead(m.name, `${m.birth_year ? (new Date().getFullYear() - m.birth_year) + " jaar · " : ""}${gms.length} groep${gms.length === 1 ? "" : "en"}`, isCoordinator() ? xbtn("edit", 'id="mbEdit"') : "") + `
-    <div class="card"><div class="chead"><h2>Groepen</h2><span class="cvn">${gms.length}</span></div>${gms.map(gm => { const g = store.byId("groups", gm.group_id); return g ? `<div class="rij"><span class="bar" style="background:${attr((groupTypeById(g.type_id) || {}).color)}"></span><span class="grow"><div class="tt">${esc(g.name)}</div><div class="sub">sinds ${fmtDate(gm.since || "", { year: true })}</div></span>${isCoordinator() ? `<button class="xbtn sm" data-rm="${attr(gm.id)}" title="Uit groep halen">${ICON.close}</button>` : ""}</div>` : ""; }).join("") || '<div class="empty">In geen enkele groep.</div>'}</div>
+    <div class="card"><div class="chead"><h2>Groepen</h2><span class="cvn">${gms.length}</span><span class="hdnote">${isCoordinator() ? `<button class="xbtn sm" id="mbAddGroup" title="Aan groep toevoegen">${ICON.plus}</button>` : ""}</span></div>${gms.map(gm => { const g = store.byId("groups", gm.group_id); return g ? `<div class="rij"><span class="bar" style="background:${attr((groupTypeById(g.type_id) || {}).color)}"></span><span class="grow"><div class="tt">${esc(g.name)}</div><div class="sub">sinds ${fmtDate(gm.since || "", { year: true })}</div></span>${isCoordinator() ? `<button class="xbtn sm" data-rm="${attr(gm.id)}" title="Uit groep halen">${ICON.close}</button>` : ""}</div>` : ""; }).join("") || '<div class="empty">In geen enkele groep.</div>'}</div>
     ${m.note ? `<div class="card"><div class="chead"><h2>Notitie</h2></div><div class="small">${esc(m.note)}</div></div>` : ""}
     <div class="card"><div class="chead"><h2>Aanwezigheid</h2><span class="cvn">${att.filter(a => a.present).length}/${att.length}</span></div><div class="cbody" style="max-height:220px">${att.length ? att.slice(0, 20).map(a => `<div class="rij"><span class="tm">${fmtDate(a.date, { weekday: true })}</span><span class="grow small muted">${esc((store.byId("groups", (store.byId("schedule_rules", a.session_key.slice(0, a.session_key.lastIndexOf("_"))) || {}).group_id) || {}).name || "")}</span><span class="st ${a.present ? "good" : "bad"}">${a.present ? "aanwezig" : "afwezig"}</span></div>`).join("") : '<div class="empty">Nog geen aanwezigheid geregistreerd.</div>'}</div></div>`;
     const ed = $("#mbEdit", sh); if (ed) ed.onclick = () => openMemberForm(mid);
+    const ag = $("#mbAddGroup", sh); if (ag) ag.onclick = () => openSheet(s2 => { const inG = new Set(gms.map(x => x.group_id)); s2.innerHTML = shead("Aan groep toevoegen", esc(m.name)) + `<div class="card">${groupsSorted().filter(g => !inG.has(g.id)).map(g => `<div class="rij clk" data-g="${attr(g.id)}"><span class="bar" style="background:${attr((groupTypeById(g.type_id) || {}).color)}"></span><span class="grow tt" style="font-weight:500">${esc(g.name)}</span><span class="sub">${membersOf(g.id).length}${g.max ? "/" + g.max : ""}</span><span class="chev">›</span></div>`).join("")}</div>`; s2.onclick = async e => { const r = e.target.closest("[data-g]"); if (!r) return; await store.save("group_members", { group_id: r.dataset.g, member_id: mid, since: todayISO() }); closeSheet(); toast("Toegevoegd"); refreshSheet(); }; });
     sh.onclick = async e => { const r = e.target.closest("[data-rm]"); if (r) { await store.remove("group_members", r.dataset.rm); toast("Uit groep gehaald"); refreshSheet(); } };
   });
 }
@@ -155,5 +157,26 @@ export function openMemberForm(mid, addToGroup, presetName = "") {
       if (addToGroup) await store.save("group_members", { group_id: addToGroup, member_id: saved.id, since: todayISO() });
       closeSheet(); if (addToGroup) closeSheet(); toast(ex ? "Opgeslagen" : "Lid aangemaakt" + (addToGroup ? " en toegevoegd" : "")); refreshSheet();
     };
+  });
+}
+
+/* ---------- Spelersdatabase ---------- */
+export function openMembers() {
+  let q = "", only = "";
+  openSheet(sh => {
+    const gms = store.rows("group_members"); const coord = isCoordinator();
+    let list = store.rows("members").filter(m => m.active !== false).slice().sort((a, b) => a.name.localeCompare(b.name));
+    if (only === "los") list = list.filter(m => !gms.some(gm => gm.member_id === m.id));
+    if (only === "jeugd") list = list.filter(m => m.birth_year && new Date().getFullYear() - m.birth_year < 18);
+    if (q) list = list.filter(m => m.name.toLowerCase().split(/\s+/).some(w => w.startsWith(q.toLowerCase())));
+    const total = store.rows("members").filter(m => m.active !== false).length; const loose = store.rows("members").filter(m => m.active !== false && !gms.some(gm => gm.member_id === m.id)).length;
+    sh.innerHTML = shead("Spelers", `${total} spelers · ${loose} zonder groep`, (coord ? xbtn("plus", 'id="msAdd" title="Nieuwe speler"') : "") + xbtn("dl", 'id="msCsv" title="CSV"')) + `
+    <div class="card"><div class="row" style="flex-wrap:wrap">${searchPil("msQ", "Zoek speler …", q)}<div class="seg" id="msOnly"><button data-v="" class="${only ? "" : "on"}">Alle</button><button data-v="jeugd" class="${only === "jeugd" ? "on" : ""}">Jeugd</button><button data-v="los" class="${only === "los" ? "on" : ""}">Zonder groep</button></div></div></div>
+    <div class="card"><div class="chead"><h2>Spelers</h2><span class="cvn">${list.length}</span></div><div class="cbody" style="max-height:65vh">${list.map(m => { const gs = gms.filter(gm => gm.member_id === m.id).map(gm => store.byId("groups", gm.group_id)).filter(Boolean); return `<div class="rij clk" data-member="${attr(m.id)}"><span class="avatar xs" style="background:var(--paper);color:var(--muted)">${esc(m.name.split(/\s+/).map(w => w[0]).slice(0, 2).join(""))}</span><span class="grow"><div class="tt" style="font-weight:500">${esc(m.name)}</div><div class="sub ell">${m.birth_year ? (new Date().getFullYear() - m.birth_year) + " jr · " : ""}${gs.length ? gs.map(g => esc(g.name)).join(", ") : '<span class="att" style="color:var(--orange)">zonder groep</span>'}</div></span><span class="chev">›</span></div>`; }).join("") || '<div class="empty">Geen spelers gevonden.</div>'}</div></div>`;
+    $("#msQ", sh).oninput = e => { q = e.target.value; refreshSheet(); const i = $("#msQ"); i.focus(); i.setSelectionRange(99, 99); };
+    $("#msOnly", sh).onclick = e => { const b = e.target.closest("button"); if (!b) return; only = b.dataset.v; refreshSheet(); };
+    const add = $("#msAdd", sh); if (add) add.onclick = () => openMemberForm(null, null, q);
+    $("#msCsv", sh).onclick = () => { import("../lib/ui.js").then(u => u.downloadText("spelers.csv", "naam;geboortejaar;email;telefoon;groepen\n" + list.map(m => [m.name, m.birth_year || "", m.email || "", m.phone || "", gms.filter(gm => gm.member_id === m.id).map(gm => (store.byId("groups", gm.group_id) || {}).name).join(", ")].join(";")).join("\n"), "text/csv")); };
+    sh.onclick = e => { const m = e.target.closest("[data-member]"); if (m) openMember(m.dataset.member); };
   });
 }

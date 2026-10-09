@@ -232,6 +232,7 @@ export function openSettings(sub) {
       ${row("coaches", "groups", "Coaches", "Profielen, rechten, uitnodigen")}
       ${row("seizoenen", "cal", "Seizoenen & vakanties", "Periodes waarin trainingen vervallen")}
       ${row("locaties", "pin", "Locaties", locationsSorted().map(l => esc(l.short || l.name)).join(", "))}
+      ${row("spelers", "user", "Spelers", "Spelersdatabase: toevoegen, bewerken, groepen")}
       ${row("typen", "flag", "Groepstypen & activiteiten", "Namen en kleuren in de kalender")}
       ${row("bezetting", "drills", "Bezetting & uren team", "Uren per coach, per maand")}
       ${row("rapport", "chart", "Rapportages", "Dekking voorbereiding en logs, thema-heatmap, vervangingen")}
@@ -246,7 +247,7 @@ export function openSettings(sub) {
       const b = e.target.closest("[data-set]"); if (!b) return; const k = b.dataset.set;
       const today = todayISO();
       const acts = { profiel: () => openProfile(me.id), uren: () => openHours(me.id), coaches: openCoaches, seizoenen: openSeasons, locaties: openLocations, typen: openTypes, bezetting: openTeamHours, rapport: openReports,
-        ics: () => openIcsSheet(),
+        ics: () => openIcsSheet(), spelers: () => import("./groups.js").then(m => m.openMembers()),
         export: () => { const all = {}; ["coaches", "members", "group_members", "seasons", "breaks", "locations", "group_types", "activity_types", "groups", "schedule_rules", "overrides", "logs", "attendance", "action_items", "drills"].forEach(t => all[t] = store.rows(t)); downloadText("trainingsplanner-backup-" + today + ".json", JSON.stringify(all, null, 1), "application/json"); },
         reset: () => confirmInline(sh.querySelector(".card:last-child"), "Alle demo-gegevens terugzetten naar de voorbeelddata?", async () => { await store.resetDemo(); closeSheet(); toast("Demo opnieuw ingesteld"); }, "Terugzetten"),
         logout: () => { closeSheet(); store.logout(); } };
